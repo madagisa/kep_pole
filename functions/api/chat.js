@@ -32,7 +32,7 @@ ${rulesText}
 `;
 
     // Make request to Gemini REST API
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
     
     const contents = body.messages.map(m => ({
       role: m.role === 'user' ? 'user' : 'model',
