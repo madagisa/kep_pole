@@ -58,7 +58,7 @@ function App() {
       } else {
          // 2. Local 개발 환경 (VITE_GEMINI_API_KEY 사용)
          const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-         const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
+         const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
          
          const systemInstruction = `
 당신은 한국전력공사(KEPCO)의 지장전주 이설 업무기준 판단 전문 AI입니다.
