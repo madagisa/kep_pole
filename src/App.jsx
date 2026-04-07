@@ -182,10 +182,10 @@ ${sourceText}
                   )}
                 </div>
 
-                <div className={`relative px-5 py-4 shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-2xl rounded-tr-none' : 'bg-slate-50 border border-slate-100/50 text-slate-800 rounded-2xl rounded-tl-none ring-1 ring-white'}`}>
+                <div className={`relative px-5 py-4 transition-all duration-300 ${msg.role === 'user' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl rounded-tr-none shadow-md shadow-blue-500/25' : 'bg-white border border-slate-100/60 text-slate-800 rounded-2xl rounded-tl-none shadow-sm shadow-slate-200/50'}`}>
                   <ReactMarkdown 
                     remarkPlugins={[remarkGfm]}
-                    className="prose prose-sm md:prose-base max-w-none prose-slate prose-headings:text-slate-800 prose-strong:text-blue-700 prose-code:bg-blue-50 prose-code:text-blue-600 prose-table:border prose-table:border-slate-200"
+                    className="prose prose-sm md:prose-base max-w-none prose-slate prose-headings:text-slate-800 prose-strong:text-blue-700 prose-code:bg-blue-50 prose-code:text-blue-600 prose-table:border prose-table:border-slate-200 prose-table:rounded-xl prose-table:overflow-hidden prose-th:bg-blue-50/50 prose-th:p-3 prose-th:text-slate-700 prose-td:p-3 prose-td:border-t prose-td:border-slate-100 prose-tr:hover:bg-slate-50/70 transition-colors"
                   >
                     {msg.content}
                   </ReactMarkdown>
@@ -193,7 +193,7 @@ ${sourceText}
                   {msg.role === 'model' && (
                     <button 
                       onClick={() => copyToClipboard(msg.content, idx)}
-                      className="absolute -bottom-10 right-0 p-2 text-slate-400 hover:text-blue-600 transition-all opacity-0 md:group-hover:opacity-100"
+                      className="absolute -bottom-10 right-0 p-2 text-slate-400 hover:text-blue-600 hover:scale-110 active:scale-95 transition-all opacity-0 md:group-hover:opacity-100"
                       title="복사하기"
                     >
                       {copiedId === idx ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
@@ -228,11 +228,11 @@ ${sourceText}
           <div ref={messagesEndRef} className="h-10" />
         </div>
 
-        {/* ⌨️ 입력 필드 */}
-        <div className="px-6 py-6 md:px-12 bg-white pb-8">
+        {/* ⌨️ 입력 필드 - 글래스모피즘 */}
+        <div className="px-4 py-4 md:px-12 bg-white/70 backdrop-blur-xl border-t border-slate-100/50 pb-6 md:pb-8 sticky bottom-0 z-20 w-full mb-0 shadow-[0_-10px_40px_rgb(0,0,0,0.02)] transition-all">
           <div className={`max-w-4xl mx-auto relative group transition-all duration-300 ${loading ? 'opacity-70 grayscale' : ''}`}>
             <textarea
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl md:rounded-[2rem] px-6 py-5 md:px-8 md:py-6 pr-20 md:pr-24 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all resize-none shadow-sm min-h-[70px] max-h-[220px]"
+              className="w-full bg-white/60 backdrop-blur-md border border-slate-200/80 rounded-2xl md:rounded-[2rem] px-6 py-5 md:px-8 md:py-6 pr-20 md:pr-24 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all resize-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] min-h-[70px] max-h-[220px]"
               placeholder="민원 케이스를 전문적으로 설명해 주세요..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -248,7 +248,7 @@ ${sourceText}
               <button
                 onClick={handleSend}
                 disabled={loading || !input.trim()}
-                className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-3xl bg-blue-600 text-white shadow-lg shadow-blue-200 flex items-center justify-center hover:bg-blue-700 hover:scale-105 active:scale-95 disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none transition-all duration-200"
+                className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-3xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30 flex items-center justify-center hover:from-blue-700 hover:to-indigo-700 hover:scale-[1.03] hover:shadow-blue-500/40 active:scale-95 disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 disabled:shadow-none transition-all duration-300"
               >
                 <ChevronRight className="w-7 h-7" />
               </button>
