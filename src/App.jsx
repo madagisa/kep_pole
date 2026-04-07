@@ -107,7 +107,7 @@ ${sourceText}
       </div>
 
       {/* 왼쪽 메인 채팅 영역 */}
-      <div className={\`flex-1 flex flex-col \${showSource ? 'hidden md:flex' : 'flex'}\`}>
+      <div className={`flex-1 flex flex-col ${showSource ? 'hidden md:flex' : 'flex'}`}>
         <div className="hidden md:flex p-6 border-b bg-white items-center">
            <BookOpen className="w-6 h-6 text-blue-700 mr-2" />
            <h1 className="text-2xl font-bold text-gray-800">지장전주 판단 AI (NotebookLM 모델)</h1>
@@ -116,8 +116,8 @@ ${sourceText}
         {/* 채팅 메시지 리스트 */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
           {messages.map((msg, idx) => (
-            <div key={idx} className={\`flex \${msg.role === 'user' ? 'justify-end' : 'justify-start'}\`}>
-              <div className={\`max-w-[85%] md:max-w-[75%] rounded-2xl p-4 \${msg.role === 'user' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white border text-gray-800 shadow-sm rounded-bl-none'}\`}>
+            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[85%] md:max-w-[75%] rounded-2xl p-4 ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white border text-gray-800 shadow-sm rounded-bl-none'}`}>
                 <ReactMarkdown className="prose prose-sm md:prose-base prose-blue max-w-none">
                   {msg.content}
                 </ReactMarkdown>
@@ -170,7 +170,7 @@ ${sourceText}
       </div>
 
       {/* 오른쪽 소스(근거 원문) 뷰어 영역 - NotebookLM 특징 */}
-      <div className={\`w-full md:w-[400px] lg:w-[500px] border-l bg-white flex flex-col \${!showSource ? 'hidden md:flex' : 'flex'}\`}>
+      <div className={`w-full md:w-[400px] lg:w-[500px] border-l bg-white flex flex-col ${!showSource ? 'hidden md:flex' : 'flex'}`}>
         <div className="p-4 border-b bg-gray-50 flex items-center text-gray-700">
           <FileText className="w-5 h-5 mr-2" />
           <h2 className="font-semibold">AI 판단 기준 (Source Document)</h2>
