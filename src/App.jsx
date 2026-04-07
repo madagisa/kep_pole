@@ -1,18 +1,32 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Send, FileText, BookOpen, AlertCircle, Loader2 } from 'lucide-react';
+import remarkGfm from 'remark-gfm';
+import { 
+  Send, 
+  FileText, 
+  BookOpen, 
+  AlertCircle, 
+  Loader2, 
+  ChevronRight, 
+  User, 
+  Bot, 
+  Copy, 
+  CheckCircle2, 
+  Search,
+  BookMarked
+} from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 function App() {
   const [messages, setMessages] = useState([
-    { role: 'model', content: "안녕하세요! 한국전력공사 지장전주 이설 비용 부담 판단 AI입니다.\n어떤 상황인지 남겨주시면, [배전선로 이설 업무기준]과 판례에 근거하여 비용 부담 주체(한전/고객)를 알려드립니다." }
+    { role: 'model', content: "안녕하세요! **한국전력공사 지장전주 가이드**에 오신 것을 환영합니다.\n\n[배전선로 이설 업무기준]과 최신 판례를 바탕으로 비용 부담 주체를 정확히 판별해 드립니다. 민원 상황을 아래에 입력해 주세요." }
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [copiedId, setCopiedId] = useState(null);
   const messagesEndRef = useRef(null);
   
-  // NotebookLM처럼 원본 소스 데이터를 보여주기 위한 상태
   const [showSource, setShowSource] = useState(false);
   const [sourceText, setSourceText] = useState("");
 
@@ -25,15 +39,20 @@ function App() {
   }, [messages]);
 
   useEffect(() => {
-    // 로컬 환경이나 Cloudflare 환경에서 규칙 텍스트 불러오기
     fetch('/kepco_rules.txt')
       .then(res => res.text())
       .then(text => setSourceText(text))
       .catch(e => console.error("Failed to load rules", e));
   }, []);
 
+  const copyToClipboard = (text, id) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || loading) return;
     
     const userMsg = { role: 'user', content: input };
     setMessages(prev => [...prev, userMsg]);
@@ -43,9 +62,6 @@ function App() {
 
     try {
       let aiResponseText = "";
-
-      // 1. Production (Cloudflare Pages) 환경 체크
-      // 개발 모드가 아니고, 로컬 환경변수가 없다면 Edge Function API 호출
       if (import.meta.env.PROD || !import.meta.env.VITE_GEMINI_API_KEY) {
          const resp = await fetch('/api/chat', {
             method: 'POST',
@@ -56,27 +72,28 @@ function App() {
          if (!resp.ok) throw new Error(data.error || "서버 통신 오류");
          aiResponseText = data.answer;
       } else {
-         // 2. Local 개발 환경 (VITE_GEMINI_API_KEY 사용)
          const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
          const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
          
          const systemInstruction = `
-당신은 한국전력공사(KEPCO)의 지장전주 이설 업무기준 판단 전문 AI입니다.
-반드시 아래의 [배전선로 이설 업무기준 및 판례 데이터] 문서에만 기반하여 사실 위주로 판단을 내려야 합니다. 
-도출 시 어떤 조항(제N조 N항 등)을 근거로 삼았는지 인용하고 원문을 요약해서 보여주세요. 판별이 모호하면 되물어주세요.
+공식 직급: 한국전력공사(KEPCO) 지장전주 이설 전문 선임 매니저
+가이드라인:
+- 반드시 아래의 [공식 업무기준] 문서 조항에 기반하여 사실적으로 판단하시오.
+- 근거 조항(제N조 N항)을 반드시 명시할 것.
+- 표 데이터가 있으면 마크다운 표(|---|---|)를 사용하여 가독성 있게 표현하시오.
+- 답변 말미에 "판단 근거: [N조 N항]"을 요약 정리하시오.
+- 문서에 없는 내용은 "본 문서에는 명시되지 않았습니다"라고 하고 지어내지 말 것.
 
-=============================
-[배전선로 이설 업무기준 및 판례 데이터]
+[공식 업무기준]
 ${sourceText}
-=============================
 `;
          const chat = model.startChat({
-           history: messages.map(m => ({
+           history: messages.slice(0, -1).map(m => ({
              role: m.role,
              parts: [{ text: m.content }]
            })),
            systemInstruction: systemInstruction,
-           generationConfig: { temperature: 0.1 }
+           generationConfig: { temperature: 0.1, topK: 1 }
          });
 
          const result = await chat.sendMessage(userMsg.content);
@@ -87,70 +104,139 @@ ${sourceText}
 
     } catch (err) {
       console.error(err);
-      setError("죄송합니다. 오류가 발생했습니다: " + err.message);
+      setError("연동 중 오류가 발생했습니다: " + err.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 md:flex-row">
-      {/* 모바일 화면용 헤더 */}
-      <div className="md:hidden flex justify-between items-center p-4 bg-white border-b shadow-sm">
-        <h1 className="text-lg font-bold text-blue-700 flex items-center">
-           <BookOpen className="w-5 h-5 mr-2" />
-           지장전주 판단 AI
-        </h1>
-        <button onClick={() => setShowSource(!showSource)} className="text-sm font-medium text-gray-600 bg-gray-100 px-3 py-1 rounded-md">
-          {showSource ? "채팅 보기" : "관련 근거 원문 보기"}
-        </button>
+    <div className="flex flex-col h-screen bg-[#F8FAFC] text-slate-800 antialiased overflow-hidden md:flex-row">
+      
+      {/* 🌟 좌측: 사이드패널 / 혹은 네비게이션 (데스크탑) */}
+      <div className="hidden md:flex flex-col w-20 lg:w-24 bg-white border-r items-center py-8 space-y-8 shadow-sm z-20">
+        <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
+          <BookMarked className="w-7 h-7" />
+        </div>
+        <div className="flex flex-col space-y-6">
+          <button className="p-3 text-blue-600 bg-blue-50 rounded-xl transition-all">
+            <Bot className="w-6 h-6" />
+          </button>
+          <button onClick={() => setShowSource(!showSource)} className={`p-3 rounded-xl transition-all ${showSource ? 'text-blue-600 bg-blue-50' : 'text-slate-400 hover:bg-slate-50'}`}>
+            <FileText className="w-6 h-6" />
+          </button>
+        </div>
       </div>
 
-      {/* 왼쪽 메인 채팅 영역 */}
-      <div className={`flex-1 flex flex-col ${showSource ? 'hidden md:flex' : 'flex'}`}>
-        <div className="hidden md:flex p-6 border-b bg-white items-center">
-           <BookOpen className="w-6 h-6 text-blue-700 mr-2" />
-           <h1 className="text-2xl font-bold text-gray-800">지장전주 판단 AI (NotebookLM 모델)</h1>
+      {/* 🚀 중앙: 메인 인터렉션 영역 */}
+      <div className={`flex-1 flex flex-col relative bg-white transition-all duration-500 overflow-hidden ${showSource ? 'md:max-w-[calc(100%-550px)]' : 'md:max-w-full'}`}>
+        
+        {/* 모바일 화면용 헤더 */}
+        <div className="md:hidden flex justify-between items-center px-6 py-4 bg-white/80 backdrop-blur-md border-b sticky top-0 z-50">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+              <Bot className="w-5 h-5" />
+            </div>
+            <span className="font-bold text-slate-800">지장전주 가이드</span>
+          </div>
+          <button onClick={() => setShowSource(!showSource)} className="text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-full transition-all">
+            {showSource ? "채팅 보기" : "관심 소스 보기"}
+          </button>
         </div>
 
-        {/* 채팅 메시지 리스트 */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        {/* 데스크탑 상단 바 */}
+        <div className="hidden md:flex items-center justify-between px-8 py-6 bg-white/80 backdrop-blur-md sticky top-0 z-10">
+          <div>
+            <h1 className="text-xl font-bold text-slate-800 flex items-center">
+              지장전주 전문가 브리핑
+              <span className="ml-3 px-2 py-0.5 bg-blue-100 text-blue-600 text-[10px] rounded-md font-extrabold uppercase tracking-widest">Enterprise Beta</span>
+            </h1>
+            <p className="text-slate-400 text-sm mt-0.5 font-medium leading-relaxed">KEPCO [배전선로 이설 업무기준] 인용 AI</p>
+          </div>
+          <div className="flex items-center space-x-3">
+             <div className="flex -space-x-2">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center overflow-hidden">
+                    <div className="w-full h-full bg-slate-200" />
+                  </div>
+                ))}
+             </div>
+             <span className="text-xs text-slate-400 font-semibold">+ 직원 활용 중</span>
+          </div>
+        </div>
+
+        {/* 💬 메시지 영역 */}
+        <div className="flex-1 overflow-y-auto px-6 py-6 md:px-12 space-y-8 scroll-smooth h-full">
           {messages.map((msg, idx) => (
-            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] md:max-w-[75%] rounded-2xl p-4 ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white border text-gray-800 shadow-sm rounded-bl-none'}`}>
-                <ReactMarkdown className="prose prose-sm md:prose-base prose-blue max-w-none">
-                  {msg.content}
-                </ReactMarkdown>
+            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+              <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-[90%] md:max-w-[80%]`}>
+                
+                <div className="flex items-center mb-1.5 space-x-2 px-1">
+                  {msg.role === 'user' ? (
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">나 (요청자)</span>
+                  ) : (
+                    <>
+                      <Bot className="w-3.5 h-3.5 text-blue-600" />
+                      <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">KEPCO AI 매니저</span>
+                    </>
+                  )}
+                </div>
+
+                <div className={`relative px-5 py-4 shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-2xl rounded-tr-none' : 'bg-slate-50 border border-slate-100/50 text-slate-800 rounded-2xl rounded-tl-none ring-1 ring-white'}`}>
+                  <ReactMarkdown 
+                    remarkPlugins={[remarkGfm]}
+                    className="prose prose-sm md:prose-base max-w-none prose-slate prose-headings:text-slate-800 prose-strong:text-blue-700 prose-code:bg-blue-50 prose-code:text-blue-600 prose-table:border prose-table:border-slate-200"
+                  >
+                    {msg.content}
+                  </ReactMarkdown>
+                  
+                  {msg.role === 'model' && (
+                    <button 
+                      onClick={() => copyToClipboard(msg.content, idx)}
+                      className="absolute -bottom-10 right-0 p-2 text-slate-400 hover:text-blue-600 transition-all opacity-0 md:group-hover:opacity-100"
+                      title="복사하기"
+                    >
+                      {copiedId === idx ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
+
           {loading && (
-             <div className="flex justify-start">
-               <div className="bg-gray-100 rounded-2xl rounded-bl-none p-4 flex items-center shadow-sm">
-                 <Loader2 className="w-5 h-5 animate-spin text-blue-600 mr-2" />
-                 <span className="text-gray-500 text-sm">문서를 종합하여 추론 중입니다...</span>
+             <div className="flex justify-start animate-pulse">
+               <div className="bg-slate-50 rounded-2xl rounded-tl-none p-5 flex items-center border border-slate-100 shadow-sm">
+                 <div className="flex space-x-2 mr-3">
+                   <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce delay-75" />
+                   <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce delay-150" />
+                   <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce delay-225" />
+                 </div>
+                 <span className="text-slate-500 text-xs font-semibold tracking-tight">문서를 종합하여 전문 소견을 정리하고 있습니다...</span>
                </div>
              </div>
           )}
+
           {error && (
-            <div className="flex justify-center my-4">
-               <div className="bg-red-50 text-red-600 px-4 py-2 rounded-lg flex items-center text-sm border border-red-100">
-                 <AlertCircle className="w-4 h-4 mr-2" />
+            <div className="flex justify-center my-6">
+               <div className="bg-red-50 text-red-600 px-6 py-3 rounded-2xl flex items-center text-sm border border-red-100 shadow-sm font-medium">
+                 <AlertCircle className="w-4 h-4 mr-3" />
                  {error}
                </div>
             </div>
           )}
-          <div ref={messagesEndRef} />
+          <div ref={messagesEndRef} className="h-10" />
         </div>
 
-        {/* 입력 영역 */}
-        <div className="p-4 bg-white border-t">
-          <div className="max-w-4xl mx-auto flex items-end bg-gray-50 rounded-2xl border pr-2 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all">
+        {/* ⌨️ 입력 필드 */}
+        <div className="px-6 py-6 md:px-12 bg-white pb-8">
+          <div className={`max-w-4xl mx-auto relative group transition-all duration-300 ${loading ? 'opacity-70 grayscale' : ''}`}>
             <textarea
-              className="flex-1 max-h-32 min-h-[56px] text-gray-800 bg-transparent p-4 resize-none outline-none"
-              placeholder="민원 상황을 구체적으로 입력하세요 (예: 본인 사유지인데 주택 신축을 위해 전주를 옮겨달라고 함)"
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl md:rounded-[2rem] px-6 py-5 md:px-8 md:py-6 pr-20 md:pr-24 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all resize-none shadow-sm min-h-[70px] max-h-[220px]"
+              placeholder="민원 케이스를 전문적으로 설명해 주세요..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              disabled={loading}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -158,36 +244,55 @@ ${sourceText}
                 }
               }}
             />
-            <button
-              onClick={handleSend}
-              disabled={loading || !input.trim()}
-              className="mb-2 p-2 rounded-xl bg-blue-600 text-white disabled:bg-gray-300 disabled:text-gray-500 hover:bg-blue-700 transition-colors"
-            >
-              <Send className="w-5 h-5" />
-            </button>
+            <div className="absolute right-3 bottom-3 md:right-4 md:bottom-4 flex space-x-2">
+              <button
+                onClick={handleSend}
+                disabled={loading || !input.trim()}
+                className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-3xl bg-blue-600 text-white shadow-lg shadow-blue-200 flex items-center justify-center hover:bg-blue-700 hover:scale-105 active:scale-95 disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none transition-all duration-200"
+              >
+                <ChevronRight className="w-7 h-7" />
+              </button>
+            </div>
           </div>
+          <p className="text-[10px] text-center text-slate-400 mt-4 uppercase tracking-[0.2em] font-bold">Powered by Gemini Intelligent Core Engine</p>
         </div>
       </div>
 
-      {/* 오른쪽 소스(근거 원문) 뷰어 영역 - NotebookLM 특징 */}
-      <div className={`w-full md:w-[400px] lg:w-[500px] border-l bg-white flex flex-col ${!showSource ? 'hidden md:flex' : 'flex'}`}>
-        <div className="p-4 border-b bg-gray-50 flex items-center text-gray-700">
-          <FileText className="w-5 h-5 mr-2" />
-          <h2 className="font-semibold">AI 판단 기준 (Source Document)</h2>
-        </div>
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-6">
-            <p className="text-sm text-blue-800 italic">
-              "AI는 반드시 좌측 채팅방에 업로드된 이 문서를 통째로 읽고 한전의 비용 부과 기준에 따라 답변합니다. 나중에 판례가 추가되면 이곳에 내용이 늘어납니다."
-            </p>
+      {/* 📖 우측: 관련 근거 뷰어 (NotebookLM 스타일) */}
+      <div className={`fixed inset-0 z-50 transition-all duration-500 md:relative md:inset-auto md:z-10 bg-slate-900/40 backdrop-blur-sm md:bg-transparent ${showSource ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto md:hidden'}`}>
+        <div className={`absolute right-0 top-0 h-full w-[85%] md:w-[450px] lg:w-[550px] bg-white shadow-2xl flex flex-col transition-all duration-500 transform ${showSource ? 'translate-x-0' : 'translate-x-full md:translate-x-0 cursor-default'}`}>
+          <div className="flex items-center justify-between p-6 border-b bg-slate-50">
+            <div className="flex items-center text-slate-800">
+               <FileText className="w-5 h-5 text-blue-600 mr-2" />
+               <span className="font-bold tracking-tight">참조 소스 원문 데이터</span>
+            </div>
+            <button onClick={() => setShowSource(false)} className="p-2 hover:bg-slate-200 rounded-full transition-all">
+              <ChevronRight className="w-5 h-5" />
+            </button>
           </div>
-          <div className="prose prose-sm text-gray-600 whitespace-pre-wrap font-sans">
-            {sourceText ? sourceText : (
-              <span className="text-red-500 font-bold text-center block mt-10">
-                public/kepco_rules.txt 파일을 찾을 수 없습니다.<br/>
-                제공하신 PDF의 텍스트를 추출하여 이 파일에 넣어주세요.
-              </span>
-            )}
+          
+          <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar bg-[#FAFBFC]">
+            <div className="bg-white border rounded-3xl p-6 shadow-sm border-blue-100 relative overflow-hidden group">
+               <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50/50 rounded-full blur-3xl -translate-y-12 translate-x-12 group-hover:bg-blue-100/50 transition-all duration-500" />
+               <h3 className="text-blue-600 font-bold text-xs uppercase tracking-widest mb-3 flex items-center">
+                 <Search className="w-3 h-3 mr-2" /> 
+                 Live Context
+               </h3>
+               <p className="text-sm text-slate-600 leading-relaxed font-medium">
+                 현재 좌측 AI는 이 문서의 **{sourceText.length.toLocaleString()}자** 데이터를 완벽하게 숙지하고 파악한 상태에서 답변하고 있습니다.
+               </p>
+            </div>
+
+            <div className="prose prose-sm prose-slate max-w-none">
+              <div className="whitespace-pre-wrap font-sans text-slate-500 leading-relaxed text-sm selection:bg-blue-100">
+                {sourceText ? sourceText : (
+                  <div className="flex flex-col items-center justify-center py-20 text-slate-300">
+                    <Loader2 className="w-10 h-10 animate-spin mb-4" />
+                    <span>데이터 로딩 중...</span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
