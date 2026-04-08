@@ -31,8 +31,9 @@ ${rulesText}
 =============================
 `;
 
-    // Make request to Gemini REST API
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+    // Make request to Gemini REST API with retry logic
+    const modelName = "gemini-1.5-flash-latest"; // 보다 안정적인 모델명으로 변경
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
     
     const contents = body.messages.map(m => ({
       role: m.role === 'user' ? 'user' : 'model',
@@ -43,20 +44,42 @@ ${rulesText}
       system_instruction: { parts: [{ text: systemInstruction }] },
       contents: contents,
       generationConfig: {
-        temperature: 0.1 // 낮게 설정하여 환각 방지 및 엄격한 추론 유도
+        temperature: 0.1
       }
     };
 
-    const geminiResp = await fetch(geminiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
+    let attempts = 0;
+    const maxAttempts = 3;
+    let geminiResp;
+    let data;
 
-    const data = await geminiResp.json();
+    while (attempts < maxAttempts) {
+      attempts++;
+      geminiResp = await fetch(geminiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
 
-    if (data.error) {
-      return new Response(JSON.stringify({ error: data.error.message }), { status: 500 });
+      data = await geminiResp.json();
+
+      if (geminiResp.ok && !data.error) break;
+
+      // 429(Rate Limit)나 503(Service Unavailable)일 경우 재시도
+      if (attempts < maxAttempts && (geminiResp.status === 429 || geminiResp.status === 503)) {
+        const delay = Math.pow(2, attempts) * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      // 그 외의 에러는 루프 종료 후 반환
+      return new Response(JSON.stringify({ 
+        error: data.error?.message || `Gemini API Error (Status ${geminiResp.status})` 
+      }), { status: 500 });
+    }
+
+    if (!data.candidates || !data.candidates[0].content) {
+      return new Response(JSON.stringify({ error: "No response from Gemini" }), { status: 500 });
     }
 
     const answer = data.candidates[0].content.parts[0].text;

@@ -73,7 +73,7 @@ function App() {
          aiResponseText = data.answer;
       } else {
          const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
          
          const systemInstruction = `
 공식 직급: 한국전력공사(KEPCO) 지장전주 이설 전문 선임 매니저
