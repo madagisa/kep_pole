@@ -32,7 +32,7 @@ ${rulesText}
 `;
 
     // Make request to Gemini REST API with retry logic
-    const modelName = "gemini-1.5-flash-latest"; // 보다 안정적인 모델명으로 변경
+    const modelName = "gemini-1.5-flash"; // 보다 안정적인 모델명으로 변경
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
     
     const contents = body.messages.map(m => ({
