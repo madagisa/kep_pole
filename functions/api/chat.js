@@ -96,7 +96,12 @@ ${rulesText}
     
     // 이메일 자동 발송 (Resend API)
     try {
-      const resendApiKey = "re_AEyEQipH_Q5iaAWHhbujz3XfR16hodtZR";
+      const resendApiKey = env.RESEND_API_KEY;
+      
+      if (!resendApiKey) {
+        console.warn("이메일 발송 경고: RESEND_API_KEY 환경 변수가 설정되지 않았습니다.");
+      }
+
       const receiptNumber = body.receiptNumber || "확인불가";
       
       const emailHtml = `
