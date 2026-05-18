@@ -22,7 +22,7 @@ import {
 function App() {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
-    applicantName: "",
+    receiptNumber: "",
     address: "",
     poleId: "",
     locationType: "private", // private, public, agrip, other
@@ -60,13 +60,14 @@ function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
+          receiptNumber: formData.receiptNumber,
           messages: [
             { 
               role: 'user', 
               content: `
 [지장전주 이설 판정 요청 데이터]
 1. 현장 정보: ${formData.address} (${formData.poleId})
-2. 신청인: ${formData.applicantName}
+2. 접수번호: ${formData.receiptNumber}
 3. 장소 성격: ${formData.locationType}
 4. 적법 권원/점용허가: ${formData.legalRight}
 5. 이설 사유: ${formData.reason}
@@ -108,14 +109,14 @@ function App() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-500 ml-1">신청인(성명/상호)</label>
+                <label className="text-sm font-bold text-slate-500 ml-1">접수번호</label>
                 <input 
                   type="text" 
-                  name="applicantName"
-                  value={formData.applicantName}
+                  name="receiptNumber"
+                  value={formData.receiptNumber}
                   onChange={handleInputChange}
                   className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium" 
-                  placeholder="예: 홍길동"
+                  placeholder="예: 7810-20260518-010111"
                 />
               </div>
               <div className="space-y-2">
@@ -332,6 +333,8 @@ function App() {
                       <div className="flex items-center space-x-2 text-blue-600 font-extrabold text-xs uppercase tracking-widest mb-2">
                         <ClipboardCheck className="w-4 h-4" />
                         <span>AI Judgment Report</span>
+                        <span className="text-slate-300">|</span>
+                        <span className="text-slate-600">접수번호: {formData.receiptNumber}</span>
                       </div>
                       <h2 className="text-3xl font-black text-slate-800 tracking-tight">부담주체 판정 보고서</h2>
                     </div>
