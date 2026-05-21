@@ -131,7 +131,7 @@ ${rulesText}
         },
         body: JSON.stringify({
           from: "onboarding@resend.dev",
-          to: ["wnsdlf96@daum.net"],
+          to: ["chicharrito99@gmail.com"],
           subject: `[지장전주 AI 판정 보고서] 접수번호: ${receiptNumber}`,
           html: emailHtml
         })
